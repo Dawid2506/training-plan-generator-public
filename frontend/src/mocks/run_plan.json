@@ -1,0 +1,39 @@
+{
+    "success": true,
+    "data": {
+        "workout_header": {
+            "title": "Adaptive Endurance Run",
+            "sport": "Run",
+            "category": "VO2Max",
+            "difficulty_score": 7,
+            "estimated_total_duration_min": 60
+        },
+        "warmup": {
+            "duration_min": 10,
+            "target_hr": "130-150",
+            "target_pace_or_speed": "7:00-8:00 min/km",
+            "instruction": "Start with a light jog to gradually increase your heart rate."
+        },
+        "main_set": {
+            "repeats": 5,
+            "work_duration_sec": 600,
+            "work_distance_meters": 0,
+            "work_target_hr": "160-175",
+            "work_target_pace_or_speed": "5:00-6:00 min/km",
+            "recovery_duration_sec": 300,
+            "recovery_distance_meters": 0,
+            "recovery_target_hr": "130-150",
+            "recovery_type": "Light Jog"
+        },
+        "cooldown": {
+            "duration_min": 10,
+            "target_hr": "120-130",
+            "target_pace_or_speed": "7:30-8:30 min/km",
+            "instruction": "Gradually slow down to bring your heart rate back to normal."
+        },
+        "coach_notes": {
+            "insight": "Focus on maintaining a consistent pace during the work intervals to improve your aerobic capacity.",
+            "safety_warning": "Stay hydrated and listen to your body. If you feel any discomfort, reduce the intensity."
+        }
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "success": true,
+    "data": {
+        "workout_header": {
+            "title": "Adaptive Ride Session",
+            "sport": "Ride",
+            "category": "VO2Max",
+            "difficulty_score": 7,
+            "estimated_total_duration_min": 60
+        },
+        "warmup": {
+            "duration_min": 10,
+            "target_hr": "110-120",
+            "target_pace_or_speed": "12-15 km/h",
+            "instruction": "Start with an easy pace to gradually increase your heart rate."
+        },
+        "main_set": {
+            "repeats": 5,
+            "work_duration_sec": 300,
+            "work_distance_meters": 0,
+            "work_target_hr": "150-160",
+            "work_target_pace_or_speed": "25-30 km/h",
+            "recovery_duration_sec": 180,
+            "recovery_distance_meters": 0,
+            "recovery_target_hr": "120-130",
+            "recovery_type": "Easy Spin"
+        },
+        "cooldown": {
+            "duration_min": 10,
+            "target_hr": "100-110",
+            "target_pace_or_speed": "10-12 km/h",
+            "instruction": "Gradually decrease your pace to allow your heart rate to return to normal."
+        },
+        "coach_notes": {
+            "insight": "Focus on maintaining a steady effort during the work intervals. Monitor your heart rate closely to stay within the target zones.",
+            "safety_warning": "Ensure you are hydrated and aware of your surroundings, especially during high-intensity efforts."
+        }
+    }
+}
