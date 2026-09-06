@@ -2,6 +2,12 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActivityCard from "./content/ActivityCard";
+import CreatePlanDialog, {
+  CreatePlanFormValues,
+  PlanActivityOption,
+  trainingTypeApiMap,
+} from "./content/CreatePlanDialog";
+import IntervalPlansTable from "./content/IntervalPlansTable";
 import { useNotifications } from "../common/NotificationsProvider";
 import { API_CONFIG, buildApiUrl } from "@/lib/api";
 import { normalizeSavedActivitiesPayload } from "@/lib/stravaActivityParser";
@@ -14,6 +20,9 @@ const ActivitiesPage = () => {
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
   const [selectedFitFile, setSelectedFitFile] = useState<File | null>(null);
   const [uploadingFitFile, setUploadingFitFile] = useState(false);
+  const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
+  const [plansRefreshKey, setPlansRefreshKey] = useState(0);
   const fitFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchSavedActivities = async () => {
@@ -155,6 +164,86 @@ const ActivitiesPage = () => {
     }
   };
 
+  // Only file imports can be planned from here - Strava activities keep their own tab.
+  const planActivityOptions = useMemo<PlanActivityOption[]>(
+    () =>
+      sortedSavedActivities
+        .filter((item) => item.sourceType === "FILE" && item.id !== undefined)
+        .map((item) => ({
+          id: String(item.id),
+          name: item.sourceFileName || item.activity?.name || "Imported activity",
+          type: item.activity?.type ?? "",
+          start_date: item.activity?.start_date ?? item.savedAt ?? "",
+        })),
+    [sortedSavedActivities],
+  );
+
+  const createIntervalPlan = async (values: CreatePlanFormValues) => {
+    try {
+      setIsCreatingPlan(true);
+
+      const workoutFocus = trainingTypeApiMap[values.trainingType];
+      let endpoint: string;
+
+      if (values.activitySource === "specific") {
+        if (values.selectedActivityIds.length === 0) {
+          throw new Error("Select at least one activity.");
+        }
+
+        endpoint = API_CONFIG.endpoints.user.detailedCertainActivities(workoutFocus);
+      } else {
+        const activityCount = values.lastActivitiesCount;
+        if (
+          typeof activityCount !== "number" ||
+          activityCount < 1 ||
+          activityCount > 20
+        ) {
+          throw new Error("Use a value from 1 to 20 for last activities.");
+        }
+
+        endpoint = API_CONFIG.endpoints.user.detailedActivities(
+          workoutFocus,
+          values.activityType,
+          activityCount,
+        );
+      }
+
+      const response = await fetch(buildApiUrl(endpoint), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body:
+          values.activitySource === "specific"
+            ? JSON.stringify({ activityIds: values.selectedActivityIds })
+            : undefined,
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("No authorization. Please sign in again.");
+        }
+
+        const errorPayload = await response.json().catch(() => null);
+        const message =
+          typeof errorPayload?.error === "string"
+            ? errorPayload.error
+            : "Failed to create interval plan";
+        throw new Error(message);
+      }
+
+      notify("Interval plan was created successfully.", "Success");
+      setIsCreatePlanOpen(false);
+      setPlansRefreshKey((value) => value + 1);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      notify(`Cannot create interval plan: ${message}`, "Error");
+    } finally {
+      setIsCreatingPlan(false);
+    }
+  };
+
   const formatSavedAt = (savedAt?: string) => {
     if (!savedAt) {
       return "Saved recently";
@@ -228,6 +317,27 @@ const ActivitiesPage = () => {
         </CardContent>
       </Card>
 
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="text-lg">Interval Plans</CardTitle>
+          <Button
+            variant="secondary"
+            onClick={() => setIsCreatePlanOpen(true)}
+            disabled={isCreatingPlan || planActivityOptions.length === 0}
+          >
+            {isCreatingPlan ? "Creating..." : "Create plan"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-500">
+            {planActivityOptions.length > 0
+              ? "Generate an interval plan from your imported FIT trainings - no Strava connection needed."
+              : "Import a FIT training first to generate an interval plan from your own files."}
+          </p>
+          <IntervalPlansTable refreshKey={plansRefreshKey} />
+        </CardContent>
+      </Card>
+
       {sortedSavedActivities.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-gray-500">
@@ -256,6 +366,16 @@ const ActivitiesPage = () => {
           ))}
         </div>
       )}
+
+      <CreatePlanDialog
+        open={isCreatePlanOpen}
+        onOpenChange={setIsCreatePlanOpen}
+        activities={planActivityOptions}
+        isSubmitting={isCreatingPlan}
+        onSubmit={createIntervalPlan}
+        filterByActivityType={false}
+        noActivitiesHint="No imported activities yet. Upload a FIT file first."
+      />
     </div>
   );
 };

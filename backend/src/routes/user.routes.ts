@@ -7,6 +7,8 @@ import {
 } from "../controllers/tokenTracking.controller";
 import {
   getAllUserActivities,
+  getIntervalPlanForCertainFileActivities,
+  getIntervalPlanForLastFileActivities,
   parseAndSaveUserActivityFile,
   parseUserActivityFile,
 } from "../controllers/user.controller";
@@ -47,5 +49,17 @@ router.post(
 );
 
 router.get("/activities", authenticateToken, getAllUserActivities);
+
+router.post(
+  "/activities/certain-activities/:focus/create-plan",
+  authenticateToken,
+  getIntervalPlanForCertainFileActivities
+);
+
+router.post(
+  "/activities/last-activities/:focus/:type/:count/create-plan",
+  authenticateToken,
+  getIntervalPlanForLastFileActivities
+);
 
 export default router;

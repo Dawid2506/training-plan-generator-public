@@ -1,7 +1,22 @@
 import { Request, Response } from "express";
 import { ActivityFileService } from "../services/activityFile.service";
+import { createIntervalPlan } from "../services/openai.service";
+import { TrainingPlanService } from "../services/trainingPlan.service";
+import { ActivityAnalysisEntry } from "../types/activity-analysis.types";
+import { getInteger, getString } from "../utils/request";
 
 const SUPPORTED_EXTENSIONS = new Set(["fit"]);
+
+const MAX_PLAN_ACTIVITIES = 20;
+
+// The coach prompt matches these lowercase values, "adaptive" included.
+const SUPPORTED_WORKOUT_FOCUS = new Set([
+	"adaptive",
+	"base",
+	"threshold",
+	"vo2max",
+	"recovery",
+]);
 
 const getFileExtension = (fileName: string): string => {
 	const parts = fileName.toLowerCase().split(".");
@@ -150,5 +165,197 @@ export const getAllUserActivities = async (
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Failed to fetch activities";
 		res.status(500).json({ success: false, error: message });
+	}
+};
+
+const getPlanWorkoutFocus = (value: unknown): string | null => {
+	const focus = getString(value)?.toLowerCase();
+
+	if (!focus || !SUPPORTED_WORKOUT_FOCUS.has(focus)) {
+		return null;
+	}
+
+	return focus;
+};
+
+const collectAnalysisData = (activities: Array<{ payload?: unknown }>): ActivityAnalysisEntry[] =>
+	activities.flatMap((activity) => ActivityFileService.getAnalysisEntries(activity.payload));
+
+const generateAndSavePlan = async (params: {
+	userId: string;
+	workoutFocus: string;
+	analysisData: ActivityAnalysisEntry[];
+	res: Response;
+}): Promise<void> => {
+	const { analysisData, res, userId, workoutFocus } = params;
+
+	if (analysisData.length === 0) {
+		res.status(404).json({
+			success: false,
+			error: "No imported activities with analysis data were found",
+		});
+		return;
+	}
+
+	const payloadForPlan = {
+		workoutFocus,
+		analysisData,
+	};
+
+	const intervalPlan = await createIntervalPlan(JSON.stringify(payloadForPlan), userId);
+
+	await TrainingPlanService.saveGeneratedPlan({
+		userId,
+		plan: intervalPlan,
+	});
+
+	res.json({
+		success: true,
+		data: intervalPlan,
+	});
+};
+
+/**
+ * POST /api/user/activities/certain-activities/:focus/create-plan
+ * Builds an interval plan from hand-picked activities imported from files.
+ */
+export const getIntervalPlanForCertainFileActivities = async (
+	req: Request,
+	res: Response
+): Promise<void> => {
+	const workoutFocus = getPlanWorkoutFocus(req.params.focus);
+
+	if (!workoutFocus) {
+		res.status(400).json({ success: false, error: "Invalid workout focus" });
+		return;
+	}
+
+	const rawActivityIds = req.body?.activityIds;
+
+	if (!Array.isArray(rawActivityIds) || rawActivityIds.length === 0) {
+		res.status(400).json({
+			success: false,
+			error: "activityIds must be a non-empty array",
+		});
+		return;
+	}
+
+	if (rawActivityIds.length > MAX_PLAN_ACTIVITIES) {
+		res.status(400).json({
+			success: false,
+			error: `Too many activity IDs. Maximum is ${MAX_PLAN_ACTIVITIES}`,
+		});
+		return;
+	}
+
+	const activityIds = [
+		...new Set(
+			rawActivityIds
+				.filter((value: unknown): value is string => typeof value === "string")
+				.map((value: string) => value.trim())
+				.filter((value: string) => value.length > 0)
+		),
+	];
+
+	if (activityIds.length === 0) {
+		res.status(400).json({
+			success: false,
+			error: "activityIds contains no valid IDs",
+		});
+		return;
+	}
+
+	try {
+		const userId = req.user?.id;
+
+		if (!userId) {
+			res.status(401).json({ success: false, error: "Unauthorized" });
+			return;
+		}
+
+		const activities = await ActivityFileService.getFileActivitiesByIds({
+			userId,
+			activityIds,
+		});
+
+		if (activities.length === 0) {
+			res.status(404).json({
+				success: false,
+				error: "No imported activities were found for the given IDs",
+			});
+			return;
+		}
+
+		await generateAndSavePlan({
+			userId,
+			workoutFocus,
+			analysisData: collectAnalysisData(activities),
+			res,
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Unknown error";
+		res.status(500).json({
+			success: false,
+			error: `Creating interval plan failed: ${message}`,
+		});
+	}
+};
+
+/**
+ * POST /api/user/activities/last-activities/:focus/:type/:count/create-plan
+ * Builds an interval plan from the most recently imported activities of one sport.
+ */
+export const getIntervalPlanForLastFileActivities = async (
+	req: Request,
+	res: Response
+): Promise<void> => {
+	const workoutFocus = getPlanWorkoutFocus(req.params.focus);
+
+	if (!workoutFocus) {
+		res.status(400).json({ success: false, error: "Invalid workout focus" });
+		return;
+	}
+
+	const count = getInteger(req.params.count);
+
+	if (count === undefined || count <= 0 || count > MAX_PLAN_ACTIVITIES) {
+		res.status(400).json({ success: false, error: "Invalid count parameter" });
+		return;
+	}
+
+	try {
+		const userId = req.user?.id;
+
+		if (!userId) {
+			res.status(401).json({ success: false, error: "Unauthorized" });
+			return;
+		}
+
+		const activities = await ActivityFileService.getRecentFileActivities({
+			userId,
+			activityType: getString(req.params.type),
+			count,
+		});
+
+		if (activities.length === 0) {
+			res.status(404).json({
+				success: false,
+				error: "No imported activities match the selected sport",
+			});
+			return;
+		}
+
+		await generateAndSavePlan({
+			userId,
+			workoutFocus,
+			analysisData: collectAnalysisData(activities),
+			res,
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Unknown error";
+		res.status(500).json({
+			success: false,
+			error: `Creating interval plan failed: ${message}`,
+		});
 	}
 };

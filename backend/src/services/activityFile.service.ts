@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma/client";
 import { getParserForFile } from "./activity-parsers/registry";
-import { ActivityAnalysisPayload } from "../types/activity-analysis.types";
+import {
+  ActivityAnalysisEntry,
+  ActivityAnalysisPayload,
+} from "../types/activity-analysis.types";
+import { normalizeActivityType } from "../utils/activity-type";
 
 export class ActivityFileService {
   static async parseFile(params: {
@@ -42,12 +46,80 @@ export class ActivityFileService {
     });
   }
 
-  static async getUserActivities(userId: string) {
+  static async getUserActivities(
+    userId: string,
+    options?: { sourceType?: "FILE" | "STRAVA" }
+  ) {
     const prismaClient = prisma as any;
 
     return prismaClient.userActivity.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(options?.sourceType ? { sourceType: options.sourceType } : {}),
+      },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /**
+   * Both FILE and STRAVA rows keep their streams under `payload.analysisData`,
+   * so plan generation can read them straight from the database.
+   */
+  static getAnalysisEntries(payload: unknown): ActivityAnalysisEntry[] {
+    const analysisData = (payload as { analysisData?: unknown })?.analysisData;
+
+    if (!Array.isArray(analysisData)) {
+      return [];
+    }
+
+    return analysisData.filter(
+      (entry): entry is ActivityAnalysisEntry =>
+        typeof entry === "object" && entry !== null && "activity" in entry
+    );
+  }
+
+  static getActivityType(activityRow: { payload?: unknown }): string {
+    const [entry] = this.getAnalysisEntries(activityRow.payload);
+    return normalizeActivityType(entry?.activity?.type);
+  }
+
+  static async getFileActivitiesByIds(params: {
+    userId: string;
+    activityIds: string[];
+  }) {
+    const prismaClient = prisma as any;
+
+    return prismaClient.userActivity.findMany({
+      where: {
+        userId: params.userId,
+        sourceType: "FILE",
+        id: { in: params.activityIds },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  static async getRecentFileActivities(params: {
+    userId: string;
+    activityType?: string;
+    count: number;
+  }) {
+    const activities = await this.getUserActivities(params.userId, {
+      sourceType: "FILE",
+    });
+
+    const requestedType = params.activityType
+      ? normalizeActivityType(params.activityType)
+      : undefined;
+
+    const matching =
+      requestedType && requestedType !== "Other"
+        ? activities.filter(
+            (activity: { payload?: unknown }) =>
+              this.getActivityType(activity) === requestedType
+          )
+        : activities;
+
+    return matching.slice(0, params.count);
   }
 }

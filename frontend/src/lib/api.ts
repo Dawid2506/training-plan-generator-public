@@ -43,6 +43,8 @@ export const API_CONFIG = {
     },
     user: {
       activities: "/api/user/activities",
+      detailedCertainActivities: (workoutFocus: string) => `/api/user/activities/certain-activities/${workoutFocus}/create-plan`,
+      detailedActivities: (workoutFocus: string, activityType: string, activityCount: number) => `/api/user/activities/last-activities/${workoutFocus}/${activityType}/${activityCount}/create-plan`,
     },
     intervalPlans: {
       paginated: (params?: { page?: number; limit?: number }) => {

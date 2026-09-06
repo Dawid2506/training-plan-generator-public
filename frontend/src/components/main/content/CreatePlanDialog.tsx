@@ -23,7 +23,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StravaActivity } from "@/types/strava";
+import { activityTypeLabel, normalizeActivityType } from "@/lib/activityType";
+
+/**
+ * Both plan sources - Strava and file imports - are addressed by an id, so the
+ * dialog works with string ids and each caller converts them back if needed.
+ */
+export interface PlanActivityOption {
+  id: string;
+  name: string;
+  type: string;
+  start_date: string;
+}
 
 const createPlanFormSchema = z
   .object({
@@ -31,7 +42,7 @@ const createPlanFormSchema = z
     trainingType: z.enum(["Base", "Threshold", "VO2Max", "Recovery", "adaptive"]),
     activitySource: z.enum(["recent", "specific"]),
     lastActivitiesCount: z.coerce.number().int().optional(),
-    selectedActivityIds: z.array(z.coerce.number().int()),
+    selectedActivityIds: z.array(z.string()),
   })
   .superRefine((data, ctx) => {
     if (data.activitySource === "recent") {
@@ -62,12 +73,31 @@ const createPlanFormSchema = z
 
 export type CreatePlanFormValues = z.infer<typeof createPlanFormSchema>;
 
+/** Training focus values the coach prompt understands. */
+export const trainingTypeApiMap: Record<
+  CreatePlanFormValues["trainingType"],
+  string
+> = {
+  adaptive: "adaptive",
+  Base: "base",
+  Threshold: "threshold",
+  VO2Max: "vo2max",
+  Recovery: "recovery",
+};
+
 interface CreatePlanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: CreatePlanFormValues) => Promise<void> | void;
-  activities: StravaActivity[];
+  activities: PlanActivityOption[];
   isSubmitting: boolean;
+  /**
+   * Strava activities are already tagged Run/Ride, so the list is narrowed to the
+   * selected sport. Imported files can carry any sport name, so they stay visible
+   * and show their own sport label instead.
+   */
+  filterByActivityType?: boolean;
+  noActivitiesHint?: string;
 }
 
 const formatActivityDate = (value: string) => {
@@ -84,6 +114,8 @@ const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({
   onSubmit,
   activities,
   isSubmitting,
+  filterByActivityType = true,
+  noActivitiesHint = "No activities available for this sport yet. Sync Strava and try again.",
 }) => {
   const form = useForm<CreatePlanFormValues>({
     resolver: zodResolver(createPlanFormSchema),
@@ -100,7 +132,11 @@ const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({
   const activitySource = form.watch("activitySource");
 
   const filteredActivities = activities
-    .filter((activity) => activity.type === activityType)
+    .filter(
+      (activity) =>
+        !filterByActivityType ||
+        normalizeActivityType(activity.type) === activityType,
+    )
     .slice(0, 30);
 
   useEffect(() => {
@@ -139,7 +175,7 @@ const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({
 
     const selectedActivityIds = form.getValues("selectedActivityIds");
     const validIds = selectedActivityIds.filter((id) =>
-      filteredActivities.some((activity) => Number(activity.id) === id),
+      filteredActivities.some((activity) => activity.id === id),
     );
 
     if (validIds.length !== selectedActivityIds.length) {
@@ -270,8 +306,14 @@ const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({
               )}
             />
 
+            {/*
+              Both branches render a FormField, so without distinct keys React reuses
+              the same controller and hands over the previous field's value for one
+              render - a number where the checkbox list expects an array of ids.
+            */}
             {activitySource === "recent" ? (
               <FormField
+                key="last-activities-count"
                 control={form.control}
                 name="lastActivitiesCount"
                 render={({ field }) => (
@@ -297,56 +339,65 @@ const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({
               />
             ) : (
               <FormField
+                key="selected-activities"
                 control={form.control}
                 name="selectedActivityIds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Which activities should be used?</FormLabel>
-                    <FormControl>
-                      <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-third/80 bg-second/20 p-3">
-                        {filteredActivities.map((activity) => {
-                          const activityId = Number(activity.id);
-                          const checked = field.value.includes(activityId);
+                render={({ field }) => {
+                  const selectedIds = Array.isArray(field.value) ? field.value : [];
 
-                          return (
-                            <label
-                              key={activity.id}
-                              className="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent p-2.5 transition-all hover:border-border hover:bg-input/25"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  if (isChecked === true) {
-                                    field.onChange([...field.value, activityId]);
-                                    return;
-                                  }
+                  return (
+                    <FormItem>
+                      <FormLabel>Which activities should be used?</FormLabel>
+                      <FormControl>
+                        <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-third/80 bg-second/20 p-3">
+                          {filteredActivities.map((activity) => {
+                            const activityId = activity.id;
+                            const checked = selectedIds.includes(activityId);
 
-                                  field.onChange(
-                                    field.value.filter((id) => id !== activityId),
-                                  );
-                                }}
-                              />
-                              <span className="text-sm leading-5 text-white">
-                                <span className="font-medium">{activity.name}</span>{" "}
-                                <span className="text-gray-300">
-                                  ({formatActivityDate(activity.start_date)})
+                            return (
+                              <label
+                                key={activity.id}
+                                className="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent p-2.5 transition-all hover:border-border hover:bg-input/25"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(isChecked) => {
+                                    if (isChecked === true) {
+                                      field.onChange([...selectedIds, activityId]);
+                                      return;
+                                    }
+
+                                    field.onChange(
+                                      selectedIds.filter((id) => id !== activityId),
+                                    );
+                                  }}
+                                />
+                                <span className="text-sm leading-5 text-white">
+                                  <span className="font-medium">{activity.name}</span>{" "}
+                                  <span className="text-gray-300">
+                                    ({formatActivityDate(activity.start_date)}
+                                    {filterByActivityType
+                                      ? ""
+                                      : `, ${activityTypeLabel(activity.type)}`}
+                                    )
+                                  </span>
                                 </span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      {filteredActivities.length > 0
-                        ? field.value.length > 0
-                          ? `Selected activities: ${field.value.length}`
-                          : "Select one or more activities matching selected sport."
-                        : "No activities available for this sport yet. Sync Strava and try again."}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        {filteredActivities.length > 0
+                          ? selectedIds.length > 0
+                            ? `Selected activities: ${selectedIds.length}`
+                            : "Select one or more activities matching selected sport."
+                          : noActivitiesHint}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -13,6 +13,8 @@ import { StravaActivity, StravaStatus } from "@/types/strava";
 import ActivityCard from "./content/ActivityCard";
 import CreatePlanDialog, {
   CreatePlanFormValues,
+  PlanActivityOption,
+  trainingTypeApiMap,
 } from "./content/CreatePlanDialog";
 import IntervalPlansTable from "./content/IntervalPlansTable";
 import { useNotifications } from "../common/NotificationsProvider";
@@ -20,17 +22,6 @@ import {
   normalizeActivitiesPayload,
   normalizeSavedActivitiesPayload,
 } from "@/lib/stravaActivityParser";
-
-const trainingTypeApiMap: Record<
-  CreatePlanFormValues["trainingType"],
-  string
-> = {
-  adaptive: "adaptive",
-  Base: "base",
-  Threshold: "threshold",
-  VO2Max: "vo2max",
-  Recovery: "recovery",
-};
 
 const StravaPage = () => {
   const { notify } = useNotifications();
@@ -46,6 +37,17 @@ const StravaPage = () => {
     new Set(),
   );
   const [plansRefreshKey, setPlansRefreshKey] = useState(0);
+
+  const planActivityOptions = useMemo<PlanActivityOption[]>(
+    () =>
+      allActivities.map((activity) => ({
+        id: String(activity.id),
+        name: activity.name,
+        type: activity.type,
+        start_date: activity.start_date,
+      })),
+    [allActivities],
+  );
 
   useEffect(() => {
     checkStravaStatus();
@@ -405,7 +407,7 @@ const StravaPage = () => {
       <CreatePlanDialog
         open={isCreatePlanOpen}
         onOpenChange={setIsCreatePlanOpen}
-        activities={allActivities}
+        activities={planActivityOptions}
         isSubmitting={isCreatingPlan}
         onSubmit={createIntervalPlan}
       />
