@@ -40,13 +40,15 @@ interface SummaryTileProps {
   icon: React.ReactNode;
   to: string;
   accent?: boolean;
+  index: number;
 }
 
-function SummaryTile({ label, value, hint, icon, to, accent }: SummaryTileProps) {
+function SummaryTile({ label, value, hint, icon, to, accent, index }: SummaryTileProps) {
   return (
     <Link
       to={to}
-      className="group rounded-xl border border-border bg-card p-5 transition-[border-color,background-color,transform] duration-[160ms] ease-out-quint hover:border-border-strong active:scale-[0.995] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+      style={{ "--stagger-index": index } as React.CSSProperties}
+      className="stagger-item group rounded-xl border border-border bg-card p-5 transition-[border-color,background-color,transform] duration-[160ms] hover:border-border-strong active:scale-[0.995] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       <div className="flex items-start justify-between gap-3">
         <span
@@ -173,6 +175,7 @@ export default function DashboardPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryTile
+            index={0}
             to="/activities"
             icon={<BookmarkIcon />}
             label="Saved sessions"
@@ -184,6 +187,7 @@ export default function DashboardPage() {
             }
           />
           <SummaryTile
+            index={1}
             to="/plans"
             icon={<RouteIcon />}
             label="Interval plans"
@@ -196,6 +200,7 @@ export default function DashboardPage() {
             }
           />
           <SummaryTile
+            index={2}
             to="/strava"
             icon={<SiStrava />}
             label="Strava"
@@ -203,6 +208,7 @@ export default function DashboardPage() {
             hint={stravaStatus?.message ?? "Connection unknown"}
           />
           <SummaryTile
+            index={3}
             to="/settings"
             icon={<ZapIcon />}
             label="Tokens · 24h"
@@ -229,10 +235,12 @@ export default function DashboardPage() {
           {isLoading ? (
             <Skeleton className="h-[9.5rem] w-full rounded-xl" />
           ) : latestActivity ? (
-            <ActivityCard
-              activity={latestActivity.activity}
-              eyebrow={`Saved ${formatRelative(latestActivity.savedAt) || "recently"}`}
-            />
+            <div className="soft-enter">
+              <ActivityCard
+                activity={latestActivity.activity}
+                eyebrow={`Saved ${formatRelative(latestActivity.savedAt) || "recently"}`}
+              />
+            </div>
           ) : (
             <Card>
               <EmptyState
@@ -277,11 +285,12 @@ export default function DashboardPage() {
               />
             ) : (
               <div className="divide-y divide-border">
-                {recentPlans.map((plan) => (
+                {recentPlans.map((plan, index) => (
                   <Link
                     key={plan.id}
                     to={`/plans/${plan.id}`}
-                    className="flex items-center gap-3 px-5 py-3.5 transition-colors duration-[120ms] first:rounded-t-xl last:rounded-b-xl hover:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    style={{ "--stagger-index": index } as React.CSSProperties}
+                    className="stagger-item flex items-center gap-3 px-5 py-3.5 transition-colors duration-[120ms] first:rounded-t-xl last:rounded-b-xl hover:bg-surface-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13.5px] font-medium">{plan.title}</p>

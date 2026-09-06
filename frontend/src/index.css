@@ -201,6 +201,55 @@
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Entrance motion. Content that lands after a fetch would otherwise
+ * pop in all at once; these ease it in and are the only movement in
+ * the app that is not direct feedback to a click.
+ * ------------------------------------------------------------------ */
+@keyframes soft-rise {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes timeline-sweep {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Set --stagger-index on each item; 45ms apart, capped by the caller. */
+@utility stagger-item {
+  animation: soft-rise 260ms var(--ease-out-quint) both;
+  animation-delay: calc(var(--stagger-index, 0) * 45ms);
+}
+
+@utility soft-enter {
+  animation: soft-rise 220ms var(--ease-out-quint) both;
+}
+
+/* Draws the session left to right, the way it will be ridden. */
+@utility timeline-reveal {
+  animation: timeline-sweep 420ms var(--ease-out-quint) both;
+}
+
 @utility tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -277,5 +326,13 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Movement is what causes trouble, not the fade - so content still eases
+     in, it just no longer travels. */
+  .stagger-item,
+  .soft-enter {
+    animation: soft-fade 160ms var(--ease-out-quint) both !important;
+    animation-delay: 0ms !important;
   }
 }

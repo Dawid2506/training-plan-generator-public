@@ -278,11 +278,12 @@ export function IntervalPlansTable({ refreshKey = 0 }: IntervalPlansTableProps) 
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
+            {table.getRowModel().rows.map((row, index) => (
               <TableRow
                 key={row.id}
                 onClick={() => navigate(`/plans/${row.original.id}`)}
-                className="cursor-pointer bg-card"
+                style={{ "--stagger-index": Math.min(index, 8) } as React.CSSProperties}
+                className="stagger-item cursor-pointer bg-card"
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>

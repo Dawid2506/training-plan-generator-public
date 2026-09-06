@@ -356,14 +356,19 @@ export default function StravaPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {allActivities.map((activity) => (
-              <ActivityCard
+            {allActivities.map((activity, index) => (
+              <div
                 key={activity.id}
+                className="stagger-item"
+                style={{ "--stagger-index": Math.min(index, 6) } as React.CSSProperties}
+              >
+              <ActivityCard
                 activity={activity}
                 isSaved={savedActivityIds.has(activity.id)}
                 isSaving={savingActivityIds.has(activity.id)}
                 onSaveClick={() => saveActivity(activity)}
               />
+              </div>
             ))}
           </div>
         )}

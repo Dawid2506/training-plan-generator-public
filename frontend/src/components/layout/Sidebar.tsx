@@ -25,6 +25,11 @@ interface SidebarProps {
   onCloseMobile: () => void;
 }
 
+// Labels arrive once the rail has finished widening, so nothing is read
+// mid-slide. Fade only - the text is already in its final position.
+const LABEL_ENTER = "animate-enter-fade";
+const LABEL_ENTER_STYLE: React.CSSProperties = { animationDelay: "120ms" };
+
 const Mark = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 32 32" className={cn("size-7 shrink-0", className)} aria-hidden="true">
     <rect width="32" height="32" rx="8" className="fill-primary/12" />
@@ -77,7 +82,11 @@ function NavRow({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
               isActive ? "text-primary" : "text-current",
             )}
           />
-          {!collapsed && <span className="truncate">{item.label}</span>}
+          {!collapsed && (
+            <span className={cn("truncate", LABEL_ENTER)} style={LABEL_ENTER_STYLE}>
+              {item.label}
+            </span>
+          )}
         </>
       )}
     </NavLink>
@@ -136,7 +145,13 @@ export function Sidebar({
         >
           <Mark />
           {!collapsed && (
-            <span className="truncate text-[14.5px] font-semibold tracking-[-0.01em]">
+            <span
+              className={cn(
+                "truncate text-[14.5px] font-semibold tracking-[-0.01em]",
+                LABEL_ENTER,
+              )}
+              style={LABEL_ENTER_STYLE}
+            >
               {APP_NAME}
             </span>
           )}
@@ -173,7 +188,7 @@ export function Sidebar({
               >
                 <Avatar name={user?.username} size="sm" />
                 {!collapsed && (
-                  <span className="min-w-0 flex-1">
+                  <span className={cn("min-w-0 flex-1", LABEL_ENTER)} style={LABEL_ENTER_STYLE}>
                     <span className="block truncate text-[13px] font-medium">
                       {user?.username ?? "Account"}
                     </span>
@@ -215,7 +230,11 @@ export function Sidebar({
                 collapsed && "rotate-180",
               )}
             />
-            {!collapsed && <span>Collapse</span>}
+            {!collapsed && (
+              <span className={LABEL_ENTER} style={LABEL_ENTER_STYLE}>
+                Collapse
+              </span>
+            )}
           </button>
         </div>
       </aside>

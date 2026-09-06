@@ -19,7 +19,9 @@ export function ChatMessage({
   status,
 }: ChatMessageProps) {
   return (
-    <div className={cn("flex gap-3", isAnswer ? "justify-start" : "justify-end")}>
+    <div
+      className={cn("soft-enter flex gap-3", isAnswer ? "justify-start" : "justify-end")}
+    >
       {isAnswer && (
         <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-muted text-primary">
           <SparklesIcon className="size-3.5" />

@@ -376,8 +376,12 @@ export default function ActivitiesPage() {
         ) : (
           <div className="space-y-4">
             {sortedSavedActivities.map((savedItem, index) => (
-              <ActivityCard
+              <div
                 key={`${savedItem.id ?? savedItem.activityId ?? index}-${savedItem.savedAt ?? "na"}`}
+                className="stagger-item"
+                style={{ "--stagger-index": Math.min(index, 6) } as React.CSSProperties}
+              >
+              <ActivityCard
                 activity={savedItem.activity}
                 eyebrow={
                   savedItem.sourceType === "FILE"
@@ -393,6 +397,7 @@ export default function ActivitiesPage() {
                   savedItem.activityId !== null && removingIds.has(savedItem.activityId)
                 }
               />
+              </div>
             ))}
           </div>
         )}

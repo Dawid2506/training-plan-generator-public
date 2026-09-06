@@ -186,7 +186,7 @@ function IntervalTimeline({ plan }: { plan: IntervalPlan }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex h-12 w-full gap-[2px] overflow-hidden rounded-lg bg-surface-muted p-1">
+      <div className="timeline-reveal flex h-12 w-full gap-[2px] overflow-hidden rounded-lg bg-surface-muted p-1">
         {segments.map((segment) => (
           <div
             key={segment.key}

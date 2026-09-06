@@ -104,9 +104,15 @@ export default function CoachPage() {
 
       if (response.ok) {
         const data = await response.json();
+        // Keep the optimistic message's id so React reuses the same element -
+        // swapping the key would replay its entrance animation as a blink, and
+        // the "sent" tick would never be seen.
         setMessages((prev) => [
-          ...prev.filter((msg) => msg.id !== tempUserMessage.id),
-          data.userMessage,
+          ...prev.map((msg) =>
+            msg.id === tempUserMessage.id
+              ? { ...data.userMessage, id: tempUserMessage.id, status: "sent" as const }
+              : msg,
+          ),
           data.aiResponse,
         ]);
       } else {
