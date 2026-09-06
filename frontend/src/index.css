@@ -1,155 +1,166 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------------ *
+ * Tokens - light is the base layer, .dark redefines the same names.
+ * No color is ever defined only inside a theme block.
+ * ------------------------------------------------------------------ */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   --radius: 0.625rem;
-  --background: oklch(0.18 0.025 260);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(22.213% 0.00003 271.152);
-  --card-foreground: oklch(0.985 0 0);
-  --card-footer: oklch(26.033% 0.00003 271.152);
+
+  --background: oklch(0.985 0.003 265);
+  --foreground: oklch(0.21 0.015 265);
+
+  --surface: oklch(1 0 0);
+  --surface-muted: oklch(0.968 0.004 265);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.015 265);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --first: oklch(18.717% 0.00202 286.054);
-  --second: oklch(0.27 0.01 286);
-  --third: oklch(38.666% 0.00004 271.152);
-  --background: oklch(22.213% 0.00003 271.152);
-  --bright-text: oklch(0.985 0 0);
-  --dark-text: oklch(15.434% 0.00002 271.152);
+  --popover-foreground: oklch(0.21 0.015 265);
+
+  --muted: oklch(0.962 0.004 265);
+  --muted-foreground: oklch(0.505 0.014 265);
+
+  --primary: oklch(0.62 0.19 42);
+  --primary-foreground: oklch(0.99 0.012 80);
+
+  --secondary: oklch(0.952 0.005 265);
+  --secondary-foreground: oklch(0.25 0.015 265);
+
+  --accent: oklch(0.95 0.006 265);
+  --accent-foreground: oklch(0.22 0.015 265);
+
+  --destructive: oklch(0.577 0.21 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.58 0.15 150);
+  --warning: oklch(0.68 0.16 72);
+  --info: oklch(0.58 0.14 245);
+
+  --border: oklch(0.9 0.006 265);
+  --border-strong: oklch(0.84 0.008 265);
+  --input: oklch(0.9 0.006 265);
+  --ring: oklch(0.62 0.19 42);
+
+  --sport-run: oklch(0.58 0.16 150);
+  --sport-ride: oklch(0.56 0.14 240);
+  --sport-other: oklch(0.55 0.16 300);
+
+  --chart-1: oklch(0.62 0.19 42);
+  --chart-2: oklch(0.58 0.13 220);
+  --chart-3: oklch(0.55 0.16 300);
+  --chart-4: oklch(0.58 0.15 150);
+  --chart-5: oklch(0.62 0.17 350);
+
+  --sidebar: oklch(0.975 0.004 265);
+  --sidebar-foreground: oklch(0.21 0.015 265);
+  --sidebar-border: oklch(0.9 0.006 265);
+  --sidebar-accent: oklch(0.94 0.006 265);
+  --sidebar-accent-foreground: oklch(0.21 0.015 265);
+
+  color-scheme: light;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
+.dark {
+  --background: oklch(0.16 0.012 265);
+  --foreground: oklch(0.97 0.004 265);
 
-p {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  font-weight: 500;
-  font-family: inherit;
-}
+  --surface: oklch(0.198 0.013 265);
+  --surface-muted: oklch(0.235 0.014 265);
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  --card: oklch(0.198 0.013 265);
+  --card-foreground: oklch(0.97 0.004 265);
 
-body {
-  margin: 0;
-  display: block;
-  min-width: 320px;
-  min-height: 100vh;
-}
+  --popover: oklch(0.215 0.014 265);
+  --popover-foreground: oklch(0.97 0.004 265);
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  --muted: oklch(0.245 0.014 265);
+  --muted-foreground: oklch(0.68 0.012 265);
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
+  --primary: oklch(0.72 0.19 45);
+  --primary-foreground: oklch(0.17 0.045 45);
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+  --secondary: oklch(0.255 0.014 265);
+  --secondary-foreground: oklch(0.96 0.004 265);
+
+  --accent: oklch(0.265 0.015 265);
+  --accent-foreground: oklch(0.97 0.004 265);
+
+  --destructive: oklch(0.66 0.19 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.76 0.17 150);
+  --warning: oklch(0.8 0.15 78);
+  --info: oklch(0.72 0.13 240);
+
+  --border: oklch(1 0 0 / 9%);
+  --border-strong: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.72 0.19 45);
+
+  --sport-run: oklch(0.78 0.17 148);
+  --sport-ride: oklch(0.72 0.14 235);
+  --sport-other: oklch(0.72 0.15 305);
+
+  --chart-1: oklch(0.72 0.19 45);
+  --chart-2: oklch(0.72 0.13 220);
+  --chart-3: oklch(0.72 0.15 305);
+  --chart-4: oklch(0.78 0.17 148);
+  --chart-5: oklch(0.72 0.16 350);
+
+  --sidebar: oklch(0.178 0.013 265);
+  --sidebar-foreground: oklch(0.97 0.004 265);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-accent: oklch(0.255 0.015 265);
+  --sidebar-accent-foreground: oklch(0.97 0.004 265);
+
+  color-scheme: dark;
 }
 
 @theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-card-footer: var(--card-footer);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sport-run: var(--sport-run);
+  --color-sport-ride: var(--sport-ride);
+  --color-sport-other: var(--sport-other);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -157,58 +168,114 @@ button:focus-visible {
   --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-first: var(--first);
-  --color-second: var(--second);
-  --color-third: var(--third);
-  --color-white-text: var(--white-text);
-  --color-dark-text: var(--dark-text);
+
+  /* Motion. Built-in easings are too weak for UI - these have punch. */
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-quint: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --animate-enter-fade: enter-fade 150ms var(--ease-out-quint) both;
+  --animate-rise: rise 240ms var(--ease-out-quint) both;
+
+  @keyframes enter-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-.dark {
-  --background: oklch(0.18 0.025 260);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.22 0.028 260);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.22 0.028 260);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.25 0.03 260);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.25 0.03 260);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.25 0.03 260);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.18 0.025 260);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.25 0.03 260);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
-    @apply bg-first text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    min-width: 320px;
+    font-size: 14px;
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+    font-synthesis: none;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 28%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbars that belong to the surface they sit on. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Reduced motion means fewer and gentler animations, not zero:
+   opacity survives, movement does not. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
