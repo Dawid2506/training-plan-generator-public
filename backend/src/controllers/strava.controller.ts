@@ -548,7 +548,10 @@ export const getIntervalPlan = async (
       return;
     }
 
-    const plan = await TrainingPlanService.getPlanById(planId);
+    // Scope the lookup to the caller. Fetching by id alone and trusting the
+    // caller to compare userId handed any authenticated user another athlete's
+    // plan if they knew the uuid.
+    const plan = await TrainingPlanService.getPlanByIdForUser(planId, userId);
 
     if (!plan) {
       res.status(404).json({ success: false, error: "Plan not found" });

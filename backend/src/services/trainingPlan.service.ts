@@ -67,4 +67,27 @@ export class TrainingPlanService {
       }
     });
   }
+
+  /**
+   * Ownership is part of the lookup, not a check the caller has to remember.
+   *
+   * getPlanById returns the userId but nothing forces a caller to compare it,
+   * and a caller that forgets hands out another athlete's plan to anyone who
+   * knows the uuid. Prefer this everywhere; the AI coach reads plans through it
+   * so that no prompt can talk its way into a cross-account read.
+   */
+  static async getPlanByIdForUser(id: string, userId: string) {
+    return prisma.trainingPlan.findFirst({
+      where: {
+        id,
+        userId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        plan: true,
+        createdAt: true,
+      }
+    });
+  }
 }

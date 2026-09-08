@@ -43,6 +43,7 @@ export const API_CONFIG = {
     },
     user: {
       activities: "/api/user/activities",
+      profile: "/api/user/profile",
       detailedCertainActivities: (workoutFocus: string) => `/api/user/activities/certain-activities/${workoutFocus}/create-plan`,
       detailedActivities: (workoutFocus: string, activityType: string, activityCount: number) => `/api/user/activities/last-activities/${workoutFocus}/${activityType}/${activityCount}/create-plan`,
     },

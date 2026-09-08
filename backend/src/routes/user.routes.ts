@@ -12,6 +12,10 @@ import {
   parseAndSaveUserActivityFile,
   parseUserActivityFile,
 } from "../controllers/user.controller";
+import {
+  getAthleteProfile,
+  updateAthleteProfile,
+} from "../controllers/athlete-profile.controller";
 import { authenticateToken } from "../middleware/auth";
 
 const router = Router();
@@ -61,5 +65,10 @@ router.post(
   authenticateToken,
   getIntervalPlanForLastFileActivities
 );
+
+// Profile is per-user, not admin-gated: the coach is admin-only today, but
+// everyone should be able to record their own physiology.
+router.get("/profile", authenticateToken, getAthleteProfile);
+router.put("/profile", authenticateToken, updateAthleteProfile);
 
 export default router;

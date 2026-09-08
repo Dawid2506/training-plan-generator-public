@@ -11,6 +11,7 @@ import {
   XIcon,
 } from "lucide-react";
 
+import { AthleteProfileCard } from "@/components/settings/AthleteProfileCard";
 import { UsageChart, type UsagePoint } from "@/components/settings/UsageChart";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -284,6 +285,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <AthleteProfileCard />
       <AppearanceCard />
       <UsageCard />
       <OcrCard />

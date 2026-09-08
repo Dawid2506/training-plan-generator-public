@@ -8,20 +8,21 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(uuid())
-  username       String         @unique
-  email          String         @unique
+  id             String          @id @default(uuid())
+  username       String          @unique
+  email          String          @unique
   password       String
-  role           UserRole       @default(USER)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  messagesUsed   Int            @default(0)
-  limitResetDate DateTime       @default(now())
+  role           UserRole        @default(USER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  messagesUsed   Int             @default(0)
+  limitResetDate DateTime        @default(now())
   chatSessions   ChatSession[]
   messages       Message[]
   tokenUsage     TokenUsage[]
   trainingPlans  TrainingPlan[]
   userActivities UserActivity[]
+  athleteProfile AthleteProfile?
 }
 
 model UserActivity {
@@ -39,6 +40,9 @@ model UserActivity {
   @@unique([userId, externalActivityId])
   @@index([userId])
   @@index([createdAt])
+  // Import time, not activity time: only ever a coarse prefilter. A season of
+  // FIT files imported in one sitting all share a createdAt.
+  @@index([userId, createdAt])
   @@index([sourceType])
   @@index([externalActivityId])
 }
@@ -113,4 +117,50 @@ enum UserRole {
   PREMIUM
   ADMIN
   SUPER_ADMIN
+}
+
+/// What the app knows about the athlete themselves rather than their sessions.
+/// Every field is optional: the profile fills in over time and the coach has to
+/// work - and say what it is missing - when it is blank.
+model AthleteProfile {
+  id                    String           @id @default(uuid())
+  userId                String           @unique
+  birthDate             DateTime?
+  sex                   Sex?
+  weightKg              Float?
+  heightCm              Float?
+  restingHr             Int?
+  maxHr                 Int?
+  ftpWatts              Int?
+  thresholdPaceSecPerKm Int?
+  experienceLevel       ExperienceLevel?
+  /// Free text written by the athlete - untrusted, sanitized before it reaches a prompt.
+  primaryGoal           String?
+  /// Free text written by the athlete - untrusted, sanitized before it reaches a prompt.
+  targetEventName       String?
+  targetEventDate       DateTime?
+  weeklyHours           Float?
+  weeklySessions        Int?
+  units                 UnitsPreference  @default(METRIC)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ELITE
+}
+
+enum UnitsPreference {
+  METRIC
+  IMPERIAL
 }

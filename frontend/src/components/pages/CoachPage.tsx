@@ -1,12 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { PlusIcon, SendHorizonalIcon, SparklesIcon } from "lucide-react";
 
 import { ChatMessage } from "@/components/coach/ChatMessage";
+import { ThinkingIndicator } from "@/components/coach/ThinkingIndicator";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_CONFIG, buildApiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+/** Must match COACH.maxUserMessageChars on the backend. */
+const MAX_MESSAGE_CHARS = 4000;
+/** Where the counter appears, so it only shows up when it is relevant. */
+const COUNTER_THRESHOLD = 3600;
 
 interface Message {
   id: string;
@@ -14,6 +21,7 @@ interface Message {
   isAnswer: boolean;
   createdAt: string;
   status?: "sending" | "sent" | "error";
+  toolsUsed?: string[];
 }
 
 interface Session {
@@ -23,10 +31,12 @@ interface Session {
   updatedAt: string;
 }
 
+// Phrased around what the tools can actually answer - a suggestion the coach
+// has to guess at teaches the athlete that it guesses.
 const SUGGESTIONS = [
-  "How should I structure next week?",
-  "Am I recovering enough between hard sessions?",
-  "Build me a threshold session for Thursday.",
+  "How has my weekly volume trended over the last month?",
+  "Compare my last three hard sessions.",
+  "Am I spending enough time in Zone 2?",
 ];
 
 export default function CoachPage() {
@@ -39,11 +49,20 @@ export default function CoachPage() {
     "Ask about pacing, recovery, or what to do next - the coach can see your training.",
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Grow the composer with its content. Reset to auto first: without it
+  // scrollHeight only ever reports the current height and the box never shrinks.
+  useLayoutEffect(() => {
+    const element = inputRef.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+  }, [inputValue]);
 
   useEffect(() => {
     const loadLatestSession = async () => {
@@ -91,6 +110,13 @@ export default function CoachPage() {
     setInputValue("");
     setIsLoading(true);
 
+    const markFailed = () =>
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempUserMessage.id ? { ...msg, status: "error" as const } : msg,
+        ),
+      );
+
     try {
       const response = await fetch(
         buildApiUrl(API_CONFIG.endpoints.chat.messages(currentSession.id)),
@@ -113,22 +139,31 @@ export default function CoachPage() {
               ? { ...data.userMessage, id: tempUserMessage.id, status: "sent" as const }
               : msg,
           ),
-          data.aiResponse,
+          { ...data.aiResponse, toolsUsed: data.toolsUsed },
         ]);
-      } else {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === tempUserMessage.id ? { ...msg, status: "error" as const } : msg,
-          ),
-        );
+        return;
+      }
+
+      // The cost guards each return a distinct code, and they mean genuinely
+      // different things to the athlete: wait a moment, slow down, or come back
+      // tomorrow. Collapsing them into one message would be unhelpful.
+      const problem = await response.json().catch(() => ({}));
+      const notice =
+        problem.code === "coach_busy"
+          ? "One question at a time - still working on the last one."
+          : problem.code === "coach_burst"
+            ? "Too many questions at once. Give it a minute."
+            : problem.code === "daily_token_ceiling"
+              ? "You've hit today's usage limit. Try again tomorrow."
+              : problem.message;
+
+      markFailed();
+      if (notice) {
+        setEmptyMessage(notice);
       }
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempUserMessage.id ? { ...msg, status: "error" as const } : msg,
-        ),
-      );
+      markFailed();
     } finally {
       setIsLoading(false);
     }
@@ -153,6 +188,8 @@ export default function CoachPage() {
       console.error("Error creating session:", error);
     }
   };
+
+  const overLimit = inputValue.length >= MAX_MESSAGE_CHARS;
 
   return (
     <div className="flex h-[calc(100vh-8.5rem)] min-h-[26rem] flex-col overflow-hidden rounded-xl border border-border bg-card">
@@ -181,24 +218,24 @@ export default function CoachPage() {
         ) : messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <EmptyState
-            icon={<SparklesIcon />}
-            title="Start a conversation"
-            description={emptyMessage}
-            action={
-              currentSession ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {SUGGESTIONS.map((suggestion) => (
-                    <Button
-                      key={suggestion}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void sendMessage(suggestion)}
-                    >
-                      {suggestion}
-                    </Button>
-                  ))}
-                </div>
-              ) : undefined
+              icon={<SparklesIcon />}
+              title="Start a conversation"
+              description={emptyMessage}
+              action={
+                currentSession ? (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {SUGGESTIONS.map((suggestion) => (
+                      <Button
+                        key={suggestion}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void sendMessage(suggestion)}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                ) : undefined
               }
             />
           </div>
@@ -210,26 +247,12 @@ export default function CoachPage() {
               isAnswer={msg.isAnswer}
               timestamp={new Date(msg.createdAt)}
               status={msg.status}
+              toolsUsed={msg.toolsUsed}
             />
           ))
         )}
 
-        {isLoading && (
-          <div className="flex gap-3">
-            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-muted text-primary">
-              <SparklesIcon className="size-3.5" />
-            </span>
-            <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-md border border-border bg-card px-4 py-3.5">
-              {[0, 1, 2].map((index) => (
-                <span
-                  key={index}
-                  className="size-1.5 animate-bounce rounded-full bg-muted-foreground"
-                  style={{ animationDelay: `${index * 120}ms` }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        {isLoading && <ThinkingIndicator />}
 
         <div ref={messagesEndRef} />
       </div>
@@ -239,18 +262,47 @@ export default function CoachPage() {
           event.preventDefault();
           void sendMessage(inputValue);
         }}
-        className="flex shrink-0 items-center gap-2 border-t border-border p-3 sm:p-4"
+        className="flex shrink-0 items-end gap-2 border-t border-border p-3 sm:p-4"
       >
-        <Input
-          ref={inputRef}
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder={
-            currentSession ? "Ask your coach anything…" : "Coach unavailable"
-          }
-          disabled={isLoading || !currentSession}
-          className="h-10 flex-1"
-        />
+        <div className="flex-1">
+          <Textarea
+            ref={inputRef}
+            rows={1}
+            value={inputValue}
+            maxLength={MAX_MESSAGE_CHARS}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={(event) => {
+              // Enter sends, Shift+Enter breaks the line. The isComposing guard
+              // is not optional: without it an IME user pressing Enter to accept
+              // a candidate would send a half-finished message instead.
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.metaKey &&
+                !event.ctrlKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                void sendMessage(inputValue);
+              }
+            }}
+            placeholder={
+              currentSession ? "Ask your coach anything…" : "Coach unavailable"
+            }
+            disabled={isLoading || !currentSession}
+            className="max-h-48 min-h-10 resize-none"
+          />
+          {inputValue.length > COUNTER_THRESHOLD && (
+            <p
+              className={cn(
+                "tnum mt-1 px-1 text-right text-[11px] text-muted-foreground",
+                overLimit && "text-destructive",
+              )}
+            >
+              {inputValue.length} / {MAX_MESSAGE_CHARS}
+            </p>
+          )}
+        </div>
         <Button
           type="submit"
           variant="primary"

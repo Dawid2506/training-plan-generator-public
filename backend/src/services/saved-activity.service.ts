@@ -109,6 +109,9 @@ export class SavedActivityService {
         sourceType: 'STRAVA',
       },
       orderBy: { createdAt: 'desc' },
+      // Bounded: every row carries its full stream payload, so reading them all
+      // costs hundreds of megabytes once an account has a season of activities.
+      take: 500,
     });
 
     return activities.map((activity: any) => ({

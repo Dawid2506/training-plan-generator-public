@@ -58,6 +58,9 @@ export class ActivityFileService {
         ...(options?.sourceType ? { sourceType: options.sourceType } : {}),
       },
       orderBy: { createdAt: "desc" },
+      // Bounded: each row carries its full stream payload (25-150 KB), so an
+      // unbounded read here scales into hundreds of megabytes on a busy account.
+      take: 500,
     });
   }
 
