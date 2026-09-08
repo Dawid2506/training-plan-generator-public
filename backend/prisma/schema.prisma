@@ -35,6 +35,10 @@ model UserActivity {
   workoutFocus       String
   payload            Json
   createdAt          DateTime       @default(now())
+  // When the activity was actually done, read out of the payload at import
+  // time. createdAt only says when the file landed here, which is the wrong
+  // clock for "my last five rides".
+  startedAt          DateTime?
   user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, externalActivityId])
@@ -43,6 +47,7 @@ model UserActivity {
   // Import time, not activity time: only ever a coarse prefilter. A season of
   // FIT files imported in one sitting all share a createdAt.
   @@index([userId, createdAt])
+  @@index([userId, startedAt])
   @@index([sourceType])
   @@index([externalActivityId])
 }

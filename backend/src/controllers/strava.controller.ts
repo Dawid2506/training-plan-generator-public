@@ -5,6 +5,9 @@ import { getString, getInteger } from '../utils/request';
 import { tokenStore } from '../utils/token-store';
 import { WorkoutFocus } from '../types/workout.types';
 import { TrainingPlanService } from '../services/trainingPlan.service';
+import { encodeIntervalPlanToFit, EmptyWorkoutError } from '../services/workout-export/fit-workout.encoder';
+import { toFitFileName } from '../services/workout-export/fit-file-name';
+import { intervalPlanSchema } from '../utils/workout.validation';
 
 const stravaService = new StravaService();
 
@@ -564,6 +567,66 @@ export const getIntervalPlan = async (
     });
   } catch (error) {
     console.error("Error getting interval plan:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};
+/**
+ * Serves a plan as a FIT workout file. Garmin watches pick these up from the
+ * GARMIN/NewFiles folder over USB, which is the only route onto the watch that
+ * needs neither a subscription nor the approval-gated Training API.
+ */
+export const downloadIntervalPlanFit = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const planId = getString(req.params.id);
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    if (!planId) {
+      res.status(400).json({ success: false, error: "Invalid plan ID" });
+      return;
+    }
+
+    const record = await TrainingPlanService.getPlanByIdForUser(planId, userId);
+
+    if (!record) {
+      res.status(404).json({ success: false, error: "Plan not found" });
+      return;
+    }
+
+    // The plan column is untyped Json, so validate before encoding rather than
+    // letting a half-written plan blow up inside the encoder.
+    const parsed = intervalPlanSchema.safeParse(record.plan);
+
+    if (!parsed.success) {
+      res.status(422).json({
+        success: false,
+        error: "This plan is incomplete and cannot be exported to a watch",
+      });
+      return;
+    }
+
+    const fitFile = await encodeIntervalPlanToFit(parsed.data);
+
+    res.setHeader("Content-Type", "application/vnd.ant.fit");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${toFitFileName(parsed.data.workout_header.title)}"`
+    );
+    res.send(fitFile);
+  } catch (error) {
+    if (error instanceof EmptyWorkoutError) {
+      res.status(422).json({ success: false, error: error.message });
+      return;
+    }
+
+    console.error("Error exporting interval plan to FIT:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 };

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authorize, callback, getAuthStatus, getLastActivity, getActivityById, getActivities, getActivityDetailById, getLastActivitiesDetails, getIntervalPlanForLastActivities, getIntervalPlanForCertainActivities, getIntervalPlans, getIntervalPlan } from '../controllers/strava.controller';
+import { authorize, callback, getAuthStatus, getLastActivity, getActivityById, getActivities, getActivityDetailById, getLastActivitiesDetails, getIntervalPlanForLastActivities, getIntervalPlanForCertainActivities, getIntervalPlans, getIntervalPlan, downloadIntervalPlanFit } from '../controllers/strava.controller';
 import { authenticateToken } from '../middleware/auth';
 import savedActivityRoutes from './saved-activity.routes';
 
@@ -32,6 +32,8 @@ router.post('/certain-activities/details/:focus/create-plan', getIntervalPlanFor
 router.get('/user-interval-plans', getIntervalPlans);
 
 router.get('/user-interval-plan/:id', getIntervalPlan);
+
+router.get('/user-interval-plan/:id/fit', downloadIntervalPlanFit);
 
 // Saved activities routes
 router.use('/saved-activities', savedActivityRoutes);

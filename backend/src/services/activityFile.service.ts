@@ -42,22 +42,50 @@ export class ActivityFileService {
         sourceType: "FILE",
         workoutFocus: params.workoutFocus,
         payload: params.payload as unknown as Prisma.InputJsonValue,
+        startedAt: this.getActivityStartedAt(params.payload),
       },
     });
   }
 
+  /**
+   * The date the activity was actually done, dug out of the payload the parsers
+   * write. Returns null when the file carried no usable timestamp, which keeps
+   * such rows sortable to the back instead of pretending they are recent.
+   */
+  static getActivityStartedAt(payload: unknown): Date | null {
+    const [entry] = this.getAnalysisEntries(payload);
+    const startDate = entry?.activity?.start_date;
+
+    if (typeof startDate !== "string") {
+      return null;
+    }
+
+    const parsed = new Date(startDate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   static async getUserActivities(
     userId: string,
-    options?: { sourceType?: "FILE" | "STRAVA" }
+    options?: {
+      sourceType?: "FILE" | "STRAVA";
+      /** "startedAt" is when it was ridden, "createdAt" when it was imported. */
+      orderBy?: "startedAt" | "createdAt";
+    }
   ) {
     const prismaClient = prisma as any;
+    // Rows imported before startedAt existed, or from files without a
+    // timestamp, must not float to the top of a newest-first list.
+    const order =
+      options?.orderBy === "createdAt"
+        ? { createdAt: "desc" as const }
+        : { startedAt: { sort: "desc" as const, nulls: "last" as const } };
 
     return prismaClient.userActivity.findMany({
       where: {
         userId,
         ...(options?.sourceType ? { sourceType: options.sourceType } : {}),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: order,
       // Bounded: each row carries its full stream payload (25-150 KB), so an
       // unbounded read here scales into hundreds of megabytes on a busy account.
       take: 500,
@@ -107,8 +135,12 @@ export class ActivityFileService {
     activityType?: string;
     count: number;
   }) {
+    // Always by the date the activity happened: a plan built from "the last
+    // five rides" must mean the five most recent rides, not the five files
+    // uploaded most recently.
     const activities = await this.getUserActivities(params.userId, {
       sourceType: "FILE",
+      orderBy: "startedAt",
     });
 
     const requestedType = params.activityType

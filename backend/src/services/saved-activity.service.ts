@@ -6,6 +6,7 @@ import {
   StravaAnalysisDataItem,
   SavedActivityPayload,
 } from '../types/saved-activity.dto';
+import { ActivityFileService } from './activityFile.service';
 
 export class SavedActivityService {
   private getActivityFromPayload(payload: unknown): StravaActivityPayload | null {
@@ -77,6 +78,7 @@ export class SavedActivityService {
           externalActivityId: BigInt(activity.id),
           workoutFocus: 'Base',
           payload: payloadToSave as unknown as Prisma.InputJsonValue,
+          startedAt: ActivityFileService.getActivityStartedAt(payloadToSave),
         },
       });
 

@@ -43,6 +43,8 @@ export const API_CONFIG = {
     },
     user: {
       activities: "/api/user/activities",
+      activitiesSorted: (sort: "date" | "import") =>
+        `/api/user/activities?sort=${sort}`,
       profile: "/api/user/profile",
       detailedCertainActivities: (workoutFocus: string) => `/api/user/activities/certain-activities/${workoutFocus}/create-plan`,
       detailedActivities: (workoutFocus: string, activityType: string, activityCount: number) => `/api/user/activities/last-activities/${workoutFocus}/${activityType}/${activityCount}/create-plan`,
@@ -55,6 +57,7 @@ export const API_CONFIG = {
         return `/api/strava/user-interval-plans${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
       },
       details: (planId: string) => `/api/strava/user-interval-plan/${planId}`,
+      fit: (planId: string) => `/api/strava/user-interval-plan/${planId}/fit`,
     },
   },
   defaultOptions: {

@@ -141,7 +141,14 @@ export const getAllUserActivities = async (
 			return;
 		}
 
-		const activities = await ActivityFileService.getUserActivities(userId);
+		// The list can be read either way round: by when the activity was done
+		// (the default) or by when it was imported.
+		const orderBy =
+			getString(req.query.sort) === "import" ? "createdAt" : "startedAt";
+
+		const activities = await ActivityFileService.getUserActivities(userId, {
+			orderBy,
+		});
 
 		const data = activities.map((item: any) => {
 			const payload = item.payload as {
@@ -156,6 +163,7 @@ export const getAllUserActivities = async (
 				format: item.format,
 				workoutFocus: item.workoutFocus,
 				createdAt: item.createdAt,
+				startedAt: item.startedAt,
 				activityId: item.externalActivityId ? Number(item.externalActivityId) : null,
 				activity,
 			};

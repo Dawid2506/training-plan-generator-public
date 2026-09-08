@@ -18,6 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_CONFIG, buildApiUrl } from "@/lib/api";
 import { formatRelative } from "@/lib/format";
@@ -26,9 +33,13 @@ import { normalizeSavedActivitiesPayload } from "@/lib/stravaActivityParser";
 import { cn } from "@/lib/utils";
 import type { SavedActivity } from "@/types/strava";
 
+/** Activity date is what training decisions hang on; import date is bookkeeping. */
+type ActivitySort = "date" | "import";
+
 export default function ActivitiesPage() {
   const { notify } = useNotifications();
   const [savedActivities, setSavedActivities] = useState<SavedActivity[]>([]);
+  const [sortBy, setSortBy] = useState<ActivitySort>("date");
   const [loading, setLoading] = useState(true);
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
   const [selectedFitFile, setSelectedFitFile] = useState<File | null>(null);
@@ -42,7 +53,7 @@ export default function ActivitiesPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        buildApiUrl(API_CONFIG.endpoints.user.activities),
+        buildApiUrl(API_CONFIG.endpoints.user.activitiesSorted(sortBy)),
         { credentials: "include" },
       );
 
@@ -60,21 +71,15 @@ export default function ActivitiesPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify]);
+  }, [notify, sortBy]);
 
   useEffect(() => {
     void fetchSavedActivities();
   }, [fetchSavedActivities]);
 
-  const sortedSavedActivities = useMemo(
-    () =>
-      [...savedActivities].sort((a, b) => {
-        const aTime = a.savedAt ? new Date(a.savedAt).getTime() : 0;
-        const bTime = b.savedAt ? new Date(b.savedAt).getTime() : 0;
-        return bTime - aTime;
-      }),
-    [savedActivities],
-  );
+  // Ordering happens in the query, so what comes back is already in the order
+  // the user asked for - re-sorting here would only be able to fight it.
+  const sortedSavedActivities = savedActivities;
 
   const removeSavedActivity = async (savedItem: SavedActivity) => {
     if (savedItem.activityId === null) {
@@ -350,13 +355,31 @@ export default function ActivitiesPage() {
 
       {/* Saved list */}
       <section className="space-y-3">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-[15px] font-semibold tracking-[-0.01em]">Saved sessions</h2>
-          {!loading && (
-            <span className="tnum text-[12.5px] text-muted-foreground">
-              {sortedSavedActivities.length}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em]">Saved sessions</h2>
+            {!loading && (
+              <span className="tnum text-[12.5px] text-muted-foreground">
+                {sortedSavedActivities.length}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[12.5px] text-muted-foreground">Sort by</span>
+            <Select
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as ActivitySort)}
+            >
+              <SelectTrigger size="sm" className="w-[9.5rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Activity date</SelectItem>
+                <SelectItem value="import">Import date</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {loading ? (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeftIcon,
+  DownloadIcon,
   HeartPulseIcon,
   LightbulbIcon,
   ShieldAlertIcon,
@@ -31,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { API_CONFIG, buildApiUrl } from "@/lib/api";
+import { notify } from "@/lib/notify";
 import { formatMeters, formatSeconds } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -246,6 +248,7 @@ export default function PlanDetailsPage() {
 
   const [plan, setPlan] = useState<IntervalPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -302,6 +305,50 @@ export default function PlanDetailsPage() {
     void fetchPlan();
   }, [planId]);
 
+  /**
+   * The endpoint authenticates with the session cookie, so the file is fetched
+   * and handed to a temporary object URL rather than linked to directly.
+   */
+  const handleDownloadFit = async () => {
+    if (!planId) return;
+
+    setIsDownloading(true);
+
+    try {
+      const response = await fetch(
+        buildApiUrl(API_CONFIG.endpoints.intervalPlans.fit(planId)),
+        { credentials: API_CONFIG.defaultOptions.credentials },
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        notify(
+          payload?.error ?? "Could not build the workout file for this plan.",
+          "Error",
+        );
+        return;
+      }
+
+      const fileName =
+        response.headers
+          .get("Content-Disposition")
+          ?.match(/filename="([^"]+)"/)?.[1] ?? "workout.fit";
+
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      notify("Could not download the workout file.", "Error");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const totalMainSetMinutes = useMemo(() => {
     if (!plan) return 0;
     const roundSeconds =
@@ -340,13 +387,60 @@ export default function PlanDetailsPage() {
   }
 
   const { workout_header: header, main_set: mainSet } = plan;
+  /** What the sport is called in the watch's own activity list. */
+  const watchActivityName = header.sport === "Ride" ? "Bike" : "Run";
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate("/plans")}>
-        <ArrowLeftIcon />
-        All plans
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/plans")}>
+          <ArrowLeftIcon />
+          All plans
+        </Button>
+
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleDownloadFit}
+          disabled={isDownloading}
+        >
+          <DownloadIcon />
+          {isDownloading ? "Preparing file..." : "Download for Garmin (.FIT)"}
+        </Button>
+      </div>
+
+      <details className="group rounded-lg border border-border bg-surface-muted/40 px-4 py-3">
+        <summary className="cursor-pointer list-none text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
+          How to load this workout onto a Garmin watch
+        </summary>
+        <ol className="mt-3 space-y-1.5 pl-4 text-[13px] leading-relaxed text-muted-foreground [&>li]:list-decimal">
+          <li>Download the .FIT file and connect your watch with the USB cable.</li>
+          <li>
+            Copy the file into the <code className="tnum">GARMIN/NewFiles</code>{" "}
+            folder on the watch.
+          </li>
+          <li>
+            Eject the watch, unplug the cable, and give it a moment to pick the
+            file up.
+          </li>
+          <li>
+            On the watch, press the start button and select the{" "}
+            <span className="text-foreground">{watchActivityName}</span> activity
+            - the workout only shows up under the activity it was built for.
+          </li>
+          <li>
+            Swipe up, select <span className="text-foreground">Workouts</span>,
+            and pick this workout from the list.
+          </li>
+        </ol>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
+          If it is not in the list, plug the watch back in: a file still sitting
+          in <code className="tnum">GARMIN/NewFiles</code> was never processed -
+          copy it into <code className="tnum">GARMIN/Workouts</code> instead and
+          restart the watch. Works on any Garmin that supports structured
+          workouts - no Connect subscription needed.
+        </p>
+      </details>
 
       <Card>
         <CardHeader>
