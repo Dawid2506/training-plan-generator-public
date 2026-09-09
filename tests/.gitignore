@@ -1,0 +1,13 @@
+node_modules/
+.env
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.auth/
+
+# Real ride files. Verified: 1393 of 1397 records in these carry GPS coordinates,
+# and the first point of a ride is usually where its rider lives. This repository
+# is public. Supply your own locally - see README.md - or scrub the position
+# records before removing this line.
+trainings/

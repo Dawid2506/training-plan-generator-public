@@ -1,0 +1,63 @@
+import type { Locator, Page } from "@playwright/test";
+
+export class ActivitiesPage {
+  /** The visible drop target; the real input next to it is sr-only. */
+  readonly dropzone: Locator;
+  readonly fileInput: Locator;
+  readonly importButton: Locator;
+  readonly clearSelection: Locator;
+  readonly createPlan: Locator;
+  readonly refresh: Locator;
+  readonly sortSelect: Locator;
+  readonly savedCount: Locator;
+  readonly cards: Locator;
+
+  constructor(private readonly page: Page) {
+    this.dropzone = page.getByText("Drop a .fit file here, or click to browse");
+    this.fileInput = page.locator("#fit-upload");
+    this.importButton = page.getByRole("button", { name: /^(Import|Importing…)$/ });
+    this.clearSelection = page.getByRole("button", { name: "Clear selected file" });
+    this.createPlan = page.getByRole("button", { name: /Create plan|Creating…/ });
+    this.refresh = page.getByRole("button", { name: "Refresh" });
+    this.sortSelect = page.getByRole("combobox");
+    this.savedCount = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Saved sessions" }) })
+      .locator("span.tnum")
+      .first();
+    // Each saved activity renders one card with this control.
+    this.cards = page.getByRole("button", { name: "Remove saved activity" });
+  }
+
+  async open(): Promise<void> {
+    await this.page.goto("/activities");
+  }
+
+  /** Puts a file on the hidden input, which is what clicking the dropzone does. */
+  async chooseFile(absolutePath: string): Promise<void> {
+    await this.fileInput.setInputFiles(absolutePath);
+  }
+
+  async importFile(absolutePath: string): Promise<void> {
+    await this.chooseFile(absolutePath);
+    await this.importButton.click();
+  }
+
+  async sortBy(option: "Activity date" | "Import date"): Promise<void> {
+    await this.sortSelect.click();
+    await this.page.getByRole("option", { name: option }).click();
+  }
+
+  /** The staged-but-not-yet-imported file, shown between the dropzone and the list. */
+  stagedFile(name: string): Locator {
+    return this.page.getByText(name, { exact: true });
+  }
+
+  card(text: string | RegExp): Locator {
+    return this.page.locator("div.stagger-item").filter({ hasText: text });
+  }
+
+  async removeFirstActivity(): Promise<void> {
+    await this.cards.first().click();
+  }
+}

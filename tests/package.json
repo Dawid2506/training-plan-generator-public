@@ -1,0 +1,23 @@
+{
+  "name": "training-plan-generator-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "End-to-end regression suite for the Training Plan Generator UI.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1",
+    "typescript": "~5.7.2"
+  }
+}
