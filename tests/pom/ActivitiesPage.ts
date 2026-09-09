@@ -57,6 +57,42 @@ export class ActivitiesPage {
     return this.page.locator("div.stagger-item").filter({ hasText: text });
   }
 
+  /**
+   * The number shown for one stat on a card, e.g. `stat(card, "Avg speed")`.
+   *
+   * `Stat` renders the value, its unit and its label inside one block, so the
+   * label is what identifies the block and the first span is the value.
+   */
+  stat(card: Locator, label: string): Locator {
+    return card
+      .locator('[data-slot="stat"]')
+      .filter({ hasText: label })
+      .locator("span")
+      .first();
+  }
+
+  /**
+   * Moving time off the card, in hours, so it can be divided into a distance.
+   *
+   * The unit is part of the reading, not decoration: formatDuration switches
+   * from mm:ss to h:mm once a session passes an hour, and "1:08" means very
+   * different things either side of that.
+   */
+  async movingTimeHours(card: Locator): Promise<number> {
+    const spans = card
+      .locator('[data-slot="stat"]')
+      .filter({ hasText: "Moving" })
+      .locator("span");
+
+    const [value, unit] = [
+      (await spans.nth(0).innerText()).trim(),
+      (await spans.nth(1).innerText()).trim(),
+    ];
+    const [left, right] = value.split(":").map(Number);
+
+    return unit === "h:mm" ? left + right / 60 : left / 60 + right / 3600;
+  }
+
   async removeFirstActivity(): Promise<void> {
     await this.cards.first().click();
   }

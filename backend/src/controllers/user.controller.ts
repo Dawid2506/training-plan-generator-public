@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { ActivityFileService } from "../services/activityFile.service";
+import { withSpeedInKmh } from "../services/activity-speed";
 import { createIntervalPlan } from "../services/openai.service";
 import { TrainingPlanService } from "../services/trainingPlan.service";
 import { ActivityAnalysisEntry } from "../types/activity-analysis.types";
@@ -165,7 +166,9 @@ export const getAllUserActivities = async (
 				createdAt: item.createdAt,
 				startedAt: item.startedAt,
 				activityId: item.externalActivityId ? Number(item.externalActivityId) : null,
-				activity,
+				// Speeds leave here in km/h whichever import wrote the row, so the
+				// client never has to know what a raw header meant.
+				activity: withSpeedInKmh(activity, item.sourceType),
 			};
 		});
 

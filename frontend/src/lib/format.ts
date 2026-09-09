@@ -30,17 +30,22 @@ export const durationUnit = (value: number | string) => {
   return raw !== null && raw >= 3600 ? "h:mm" : "mm:ss";
 };
 
+/**
+ * Speeds arrive in km/h. The API normalises them there (activity-speed.ts)
+ * because only the backend knows whether a row came from Strava or a FIT file,
+ * and the two used to store different units under the same field name.
+ */
 export const formatSpeed = (value: number | string) => {
-  const mps = asFiniteNumber(value);
-  if (mps === null) return String(value);
-  return `${(mps * 3.6).toFixed(1)}`;
+  const kmh = asFiniteNumber(value);
+  if (kmh === null) return String(value);
+  return `${kmh.toFixed(1)}`;
 };
 
 /** Running pace reads better than km/h, so runs get min/km. */
 export const formatPace = (value: number | string) => {
-  const mps = asFiniteNumber(value);
-  if (mps === null || mps <= 0) return "-";
-  const secondsPerKm = 1000 / mps;
+  const kmh = asFiniteNumber(value);
+  if (kmh === null || kmh <= 0) return "-";
+  const secondsPerKm = 3600 / kmh;
   const minutes = Math.floor(secondsPerKm / 60);
   const seconds = Math.round(secondsPerKm % 60);
   if (seconds === 60) return `${minutes + 1}:00`;

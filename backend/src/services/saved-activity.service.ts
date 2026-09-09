@@ -7,6 +7,7 @@ import {
   SavedActivityPayload,
 } from '../types/saved-activity.dto';
 import { ActivityFileService } from './activityFile.service';
+import { withSpeedInKmh } from './activity-speed';
 
 export class SavedActivityService {
   private getActivityFromPayload(payload: unknown): StravaActivityPayload | null {
@@ -59,7 +60,7 @@ export class SavedActivityService {
             id: existing.id,
             activityId: Number(existing.externalActivityId),
             savedAt: existing.createdAt.toISOString(),
-            activity: parsedActivity || activity,
+            activity: withSpeedInKmh(parsedActivity || activity, 'STRAVA'),
             analysisData: (existing.payload as unknown as SavedActivityPayload).analysisData,
           },
         };
@@ -91,7 +92,7 @@ export class SavedActivityService {
           id: saved.id,
           activityId: Number(saved.externalActivityId),
           savedAt: saved.createdAt.toISOString(),
-          activity,
+          activity: withSpeedInKmh(activity, 'STRAVA'),
           analysisData: savedPayload.analysisData,
         },
       };
@@ -120,20 +121,22 @@ export class SavedActivityService {
       id: activity.id,
       activityId: Number(activity.externalActivityId),
       savedAt: activity.createdAt.toISOString(),
-      activity:
+      activity: withSpeedInKmh(
         this.getActivityFromPayload(activity.payload as unknown) ||
-        ({
-          id: Number(activity.externalActivityId),
-          name: '',
-          type: '',
-          distance: 0,
-          moving_time: 0,
-          elapsed_time: 0,
-          total_elevation_gain: 0,
-          average_speed: 0,
-          max_speed: 0,
-          start_date: new Date(0).toISOString(),
-        } as StravaActivityPayload),
+          ({
+            id: Number(activity.externalActivityId),
+            name: '',
+            type: '',
+            distance: 0,
+            moving_time: 0,
+            elapsed_time: 0,
+            total_elevation_gain: 0,
+            average_speed: 0,
+            max_speed: 0,
+            start_date: new Date(0).toISOString(),
+          } as StravaActivityPayload),
+        'STRAVA'
+      ),
       analysisData: (activity.payload as unknown as SavedActivityPayload).analysisData,
     }));
   }
